@@ -1,0 +1,85 @@
+blueprint:
+  name: Ligar luzes e switches com presença e horário (bloqueio por modo)
+  description: >
+    Liga luzes e switches ao detectar presença, se estiver dentro do horário permitido
+    e se um input_boolean (modo) de bloqueio estiver desligado.
+  domain: automation
+  input:
+    sensor_presenca:
+      name: Sensor de presença
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class:
+            - motion
+            - occupancy
+            - presence
+
+    luzes:
+      name: Luzes a ligar
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+    switches:
+      name: Switches a ligar (opcional)
+      default: []
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+
+    modo_bloqueio:
+      name: Modo que desativa a automação (input_boolean)
+      description: Se este modo estiver ativado, a automação será bloqueada.
+      selector:
+        entity:
+          domain: input_boolean
+
+    horario_inicio:
+      name: Início do horário permitido
+      default: "06:00:00"
+      selector:
+        time: {}
+
+    horario_fim:
+      name: Fim do horário permitido
+      default: "22:00:00"
+      selector:
+        time: {}
+
+trigger:
+  - platform: state
+    entity_id: !input sensor_presenca
+    to: "on"
+
+condition:
+  - condition: time
+    after: !input horario_inicio
+    before: !input horario_fim
+
+  - condition: state
+    entity_id: !input modo_bloqueio
+    state: "off"
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ luzes | length > 0 }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input luzes
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ switches | length > 0 }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input switches
+
+mode: single
