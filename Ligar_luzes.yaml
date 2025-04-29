@@ -1,8 +1,8 @@
 blueprint:
-  name: Ligar Luzes e Switches com Presença (Modo e Horário Opcionais)
+  name: Ligar Luzes e Switches com Presença (com Modos e Horário Opcionais)
   description: >
-    Liga luzes e/ou switches automaticamente ao detectar presença ou movimento,
-    com suporte a restrições por modo (input_boolean) e/ou horário — incluindo faixas que cruzam a meia-noite.
+    Liga luzes e/ou switches automaticamente ao detectar presença ou movimento.
+    Permite restrições por horário, modo ativado e modo que desabilita.
   domain: automation
   input:
     sensores_presenca:
@@ -31,8 +31,15 @@ blueprint:
           domain: switch
           multiple: true
 
-    modo_booleano:
-      name: Modo (input_boolean) necessário (opcional)
+    modo_ativado:
+      name: Somente se este modo estiver ligado (opcional)
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+
+    modo_desabilitado:
+      name: Não executar se este modo estiver ligado (opcional)
       default: ""
       selector:
         entity:
@@ -65,11 +72,20 @@ condition:
   - condition: and
     conditions:
 
-      # Condição opcional: modo ativado
+      # Condição: se um modo deve estar ligado
       - condition: template
         value_template: >
-          {% if modo_booleano != '' %}
-            {{ is_state(modo_booleano, 'on') }}
+          {% if modo_ativado != '' %}
+            {{ is_state(modo_ativado, 'on') }}
+          {% else %}
+            true
+          {% endif %}
+
+      # Condição: se um modo deve estar desligado (bloqueio)
+      - condition: template
+        value_template: >
+          {% if modo_desabilitado != '' %}
+            {{ is_state(modo_desabilitado, 'off') }}
           {% else %}
             true
           {% endif %}
