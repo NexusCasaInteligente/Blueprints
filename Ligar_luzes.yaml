@@ -2,7 +2,7 @@ blueprint:
   name: Ligar Luzes e Switches com Presença (Modo e Horário Opcionais)
   description: >
     Liga luzes e/ou switches automaticamente ao detectar presença ou movimento,
-    com suporte a restrições por modo (input_boolean) e/ou horário.
+    com suporte a restrições por modo (input_boolean) e/ou horário — incluindo faixas que cruzam a meia-noite.
   domain: automation
   input:
     sensores_presenca:
@@ -31,14 +31,8 @@ blueprint:
           domain: switch
           multiple: true
 
-    usar_modo:
-      name: Restringir por modo?
-      default: false
-      selector:
-        boolean: {}
-
     modo_booleano:
-      name: Modo (input_boolean) necessário
+      name: Modo (input_boolean) necessário (opcional)
       default: ""
       selector:
         entity:
@@ -52,13 +46,13 @@ blueprint:
 
     horario_inicio:
       name: Início do horário permitido
-      default: "18:00:00"
+      default: ""
       selector:
         time: {}
 
     horario_fim:
       name: Fim do horário permitido
-      default: "06:00:00"
+      default: ""
       selector:
         time: {}
 
@@ -70,27 +64,41 @@ trigger:
 condition:
   - condition: and
     conditions:
-      - condition: or
-        conditions:
-          - condition: template
-            value_template: "{{ not (input.usar_modo | bool) }}"
-          - condition: state
-            entity_id: !input modo_booleano
-            state: "on"
 
-      - condition: or
-        conditions:
-          - condition: template
-            value_template: "{{ not (input.usar_horario | bool) }}"
-          - condition: time
-            after: !input horario_inicio
-            before: !input horario_fim
+      # Condição opcional: modo ativado
+      - condition: template
+        value_template: >
+          {% if modo_booleano != '' %}
+            {{ is_state(modo_booleano, 'on') }}
+          {% else %}
+            true
+          {% endif %}
+
+      # Condição opcional: dentro do horário com suporte a madrugada
+      - condition: template
+        value_template: >
+          {% if not usar_horario %}
+            true
+          {% else %}
+            {% set start = strptime(horario_inicio, '%H:%M:%S').time() if horario_inicio != "" else None %}
+            {% set end = strptime(horario_fim, '%H:%M:%S').time() if horario_fim != "" else None %}
+            {% set now = now().time() %}
+            {% if start and end %}
+              {% if start < end %}
+                {{ start <= now <= end }}
+              {% else %}
+                {{ now >= start or now <= end }}
+              {% endif %}
+            {% else %}
+              true
+            {% endif %}
+          {% endif %}
 
 action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ input.luzes | length > 0 }}"
+            value_template: "{{ luzes | length > 0 }}"
         sequence:
           - service: light.turn_on
             target:
@@ -99,7 +107,7 @@ action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ input.switches | length > 0 }}"
+            value_template: "{{ switches | length > 0 }}"
         sequence:
           - service: switch.turn_on
             target:
