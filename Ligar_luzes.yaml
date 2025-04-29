@@ -1,16 +1,19 @@
 blueprint:
   name: Ligar Luzes com Presença (Modo e Horário Opcionais)
   description: >
-    Liga luzes automaticamente ao detectar presença/movimento, com opção de restrição por
-    modo (input_boolean) e/ou por faixa de horário.
+    Liga luzes automaticamente ao detectar presença, com suporte a sensores de movimento,
+    presença e ocupação. Pode incluir restrições por horário e/ou modo (input_boolean).
   domain: automation
   input:
     sensores_presenca:
-      name: Sensores de presença ou movimento
+      name: Sensores de presença, ocupação ou movimento
       selector:
         entity:
           domain: binary_sensor
-          device_class: motion
+          device_class:
+            - motion
+            - occupancy
+            - presence
           multiple: true
 
     luzes:
