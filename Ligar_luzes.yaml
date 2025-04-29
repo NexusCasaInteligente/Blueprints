@@ -1,8 +1,8 @@
 blueprint:
-  name: Ligar Luzes com Presença (Modo e Horário Opcionais)
+  name: Ligar Luzes e Switches com Presença (Modo e Horário Opcionais)
   description: >
-    Liga luzes automaticamente ao detectar presença, com suporte a sensores de movimento,
-    presença e ocupação. Pode incluir restrições por horário e/ou modo (input_boolean).
+    Liga luzes e/ou switches automaticamente ao detectar presença ou movimento,
+    com suporte a restrições por modo (input_boolean) e/ou horário.
   domain: automation
   input:
     sensores_presenca:
@@ -21,6 +21,14 @@ blueprint:
       selector:
         entity:
           domain: light
+          multiple: true
+
+    switches:
+      name: Switches a ligar (opcional)
+      default: []
+      selector:
+        entity:
+          domain: switch
           multiple: true
 
     usar_modo:
@@ -79,8 +87,22 @@ condition:
             before: !input horario_fim
 
 action:
-  - service: light.turn_on
-    target:
-      entity_id: !input luzes
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ input.luzes | length > 0 }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input luzes
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ input.switches | length > 0 }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input switches
 
 mode: restart
