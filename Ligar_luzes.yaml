@@ -1,0 +1,83 @@
+blueprint:
+  name: Ligar Luzes com Presença (Modo e Horário Opcionais)
+  description: >
+    Liga luzes automaticamente ao detectar presença/movimento, com opção de restrição por
+    modo (input_boolean) e/ou por faixa de horário.
+  domain: automation
+  input:
+    sensores_presenca:
+      name: Sensores de presença ou movimento
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+          multiple: true
+
+    luzes:
+      name: Luzes a ligar
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+    usar_modo:
+      name: Restringir por modo?
+      default: false
+      selector:
+        boolean: {}
+
+    modo_booleano:
+      name: Modo (input_boolean) necessário
+      default: ""
+      selector:
+        entity:
+          domain: input_boolean
+
+    usar_horario:
+      name: Restringir por horário?
+      default: false
+      selector:
+        boolean: {}
+
+    horario_inicio:
+      name: Início do horário permitido
+      default: "18:00:00"
+      selector:
+        time: {}
+
+    horario_fim:
+      name: Fim do horário permitido
+      default: "06:00:00"
+      selector:
+        time: {}
+
+trigger:
+  - platform: state
+    entity_id: !input sensores_presenca
+    to: "on"
+
+condition:
+  - condition: and
+    conditions:
+      - condition: or
+        conditions:
+          - condition: template
+            value_template: "{{ not (input.usar_modo | bool) }}"
+          - condition: state
+            entity_id: !input modo_booleano
+            state: "on"
+
+      - condition: or
+        conditions:
+          - condition: template
+            value_template: "{{ not (input.usar_horario | bool) }}"
+          - condition: time
+            after: !input horario_inicio
+            before: !input horario_fim
+
+action:
+  - service: light.turn_on
+    target:
+      entity_id: !input luzes
+
+mode: restart

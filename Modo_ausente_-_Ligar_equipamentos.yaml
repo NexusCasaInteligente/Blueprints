@@ -1,0 +1,105 @@
+blueprint:
+  name: Ligar Equipamentos ao Desativar Modo
+  description: >
+    Liga luzes, ventiladores, TVs e tomadas ao desativar um modo como "ausente".
+    Opcionalmente envia uma mensagem pela Alexa via script personalizado.
+  domain: automation
+  input:
+    modo_booleano:
+      name: Booleano do modo (ex: modo ausente)
+      selector:
+        entity:
+          domain: input_boolean
+
+    luzes:
+      name: Luzes a ligar
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+    ventiladores:
+      name: Ventiladores a ligar
+      selector:
+        entity:
+          domain: fan
+          multiple: true
+
+    tvs:
+      name: TVs a ligar
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+
+    tomadas:
+      name: Tomadas a ligar
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+
+    script_fala:
+      name: Script para anúncio na Alexa (opcional)
+      default: ""
+      selector:
+        entity:
+          domain: script
+
+    mensagem:
+      name: Mensagem para Alexa (opcional)
+      default: ""
+      selector:
+        text: {}
+
+    dispositivos_alexa:
+      name: Dispositivos Alexa (opcional)
+      default: []
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+
+    volume:
+      name: Volume da Alexa (opcional)
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.1
+          unit_of_measurement: ""
+
+trigger:
+  - platform: state
+    entity_id: !input modo_booleano
+    from: "on"
+    to: "off"
+
+condition: []
+
+action:
+  - service: light.turn_on
+    target:
+      entity_id: !input luzes
+  - service: fan.turn_on
+    target:
+      entity_id: !input ventiladores
+  - service: switch.turn_on
+    target:
+      entity_id: !input tvs
+  - service: switch.turn_on
+    target:
+      entity_id: !input tomadas
+
+  - if:
+      - condition: template
+        value_template: "{{ script_fala != '' and mensagem != '' }}"
+    then:
+      - service: !input script_fala
+        data:
+          mensagem: !input mensagem
+          onde_anunciar: !input dispositivos_alexa
+          volume: !input volume
+
+mode: single
