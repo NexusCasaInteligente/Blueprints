@@ -1,8 +1,8 @@
 blueprint:
-  name: Ligar luzes e switches com presença e horário (bloqueio por modo)
+  name: Ligar luzes e switches com presença (respeita horário e modo)
   description: >
-    Liga luzes e switches ao detectar presença, apenas dentro de um horário específico,
-    e se um modo (input_boolean) de bloqueio estiver desligado.
+    Liga luzes e/ou switches quando detectar presença,
+    apenas dentro do horário definido e se o modo bloqueador estiver desligado.
   domain: automation
   input:
     sensor_presenca:
@@ -32,20 +32,20 @@ blueprint:
           multiple: true
 
     modo_bloqueio:
-      name: Modo que desativa a automação (input_boolean)
-      description: Se este modo estiver ativado, a automação será ignorada.
+      name: Modo de bloqueio (input_boolean)
+      description: A automação será ignorada se esse modo estiver ativado.
       selector:
         entity:
           domain: input_boolean
 
     horario_inicio:
-      name: Início do horário permitido
+      name: Horário de início
       default: "06:00:00"
       selector:
         time: {}
 
     horario_fim:
-      name: Fim do horário permitido
+      name: Horário de fim
       default: "22:00:00"
       selector:
         time: {}
@@ -59,7 +59,6 @@ condition:
   - condition: time
     after: !input horario_inicio
     before: !input horario_fim
-
   - condition: state
     entity_id: !input modo_bloqueio
     state: "off"
@@ -68,11 +67,17 @@ action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ not (is_state('input_boolean.modo_dormir', 'on')) }}"
+            value_template: "{{ (not is_state('!input luzes', [])) }}"
         sequence:
           - service: light.turn_on
             target:
               entity_id: !input luzes
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ (not is_state('!input switches', [])) }}"
+        sequence:
           - service: switch.turn_on
             target:
               entity_id: !input switches
