@@ -1,8 +1,8 @@
 blueprint:
   name: Ligar luzes e switches com presença e horário (bloqueio por modo)
   description: >
-    Liga luzes e switches ao detectar presença, se estiver dentro do horário permitido
-    e se um input_boolean (modo) de bloqueio estiver desligado.
+    Liga luzes e switches ao detectar presença, apenas dentro de um horário específico,
+    e se um modo (input_boolean) de bloqueio estiver desligado.
   domain: automation
   input:
     sensor_presenca:
@@ -16,7 +16,8 @@ blueprint:
             - presence
 
     luzes:
-      name: Luzes a ligar
+      name: Luzes a ligar (opcional)
+      default: []
       selector:
         entity:
           domain: light
@@ -32,7 +33,7 @@ blueprint:
 
     modo_bloqueio:
       name: Modo que desativa a automação (input_boolean)
-      description: Se este modo estiver ativado, a automação será bloqueada.
+      description: Se este modo estiver ativado, a automação será ignorada.
       selector:
         entity:
           domain: input_boolean
@@ -81,14 +82,5 @@ action:
         data: {}
         target:
           entity_id: !input switches
-
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ switches | length > 0 }}"
-        sequence:
-          - service: switch.turn_on
-            target:
-              entity_id: !input switches
 
 mode: single
