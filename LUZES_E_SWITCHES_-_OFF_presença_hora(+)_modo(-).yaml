@@ -1,8 +1,8 @@
 blueprint:
   name: LUZES_E_SWITCHES_-_OFF_presença_hora(+)_modo(-)
   description: >
-    Desliga luzes e switches após ausência de presença por um tempo definido.
-    A automação só roda se estiver dentro do intervalo de horário configurado e o modo de bloqueio estiver desligado.
+    Desliga luzes e switches após ausência de presença por um tempo determinado.
+    Funciona apenas dentro de um intervalo de horário (ativo por padrão) e se o modo de bloqueio estiver desligado.
   domain: automation
   input:
     sensor_presenca:
@@ -31,7 +31,7 @@ blueprint:
           multiple: true
 
     tempo_ausencia:
-      name: Tempo sem presença (segundos)
+      name: Tempo sem presença (em segundos)
       default: 30
       selector:
         number:
@@ -67,16 +67,17 @@ trigger:
       seconds: !input tempo_ausencia
 
 condition:
-  - condition: template
-    value_template: >-
-      {% set modo = inputs.modo_bloqueio %}
-      {{ not modo or not is_state(modo, 'on') }}
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ not (modo_bloqueio is defined and modo_bloqueio != none) }}"
+      - condition: state
+        entity_id: !input modo_bloqueio
+        state: "off"
 
-  - condition: template
-    value_template: >-
-      {% set inicio = inputs.horario_inicio %}
-      {% set fim = inputs.horario_fim %}
-      {{ now().strftime('%H:%M:%S') >= inicio and now().strftime('%H:%M:%S') <= fim }}
+  - condition: time
+    after: !input horario_inicio
+    before: !input horario_fim
 
 action:
   - service: light.turn_off
@@ -86,7 +87,7 @@ action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ inputs.switches | length > 0 }}"
+            value_template: "{{ (switches | default([])) | length > 0 }}"
         sequence:
           - service: switch.turn_off
             target:
