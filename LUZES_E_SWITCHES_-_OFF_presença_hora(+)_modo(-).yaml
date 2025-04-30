@@ -1,0 +1,105 @@
+blueprint:
+  name: Desligar luzes e switches após ausência de presença
+  description: >
+    Desliga luzes e switches após ausência de presença por um tempo definido.
+    Pode ser condicionado por horário e por um modo de bloqueio (input_boolean).
+  domain: automation
+  input:
+    sensor_presenca:
+      name: Sensor de presença
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class:
+            - motion
+            - occupancy
+            - presence
+
+    luzes:
+      name: Luzes a desligar (opcional)
+      default: []
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+    switches:
+      name: Switches a desligar (opcional)
+      default: []
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+
+    tempo_ausencia:
+      name: Tempo sem presença (segundos)
+      default: 30
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: seconds
+          mode: slider
+
+    modo_bloqueio:
+      name: Modo de bloqueio (input_boolean) — opcional
+      description: Se estiver ativado, a automação não será executada
+      default: null
+      selector:
+        entity:
+          domain: input_boolean
+
+    horario_inicio:
+      name: Horário de início (opcional)
+      default: ""
+      selector:
+        time: {}
+
+    horario_fim:
+      name: Horário de fim (opcional)
+      default: ""
+      selector:
+        time: {}
+
+trigger:
+  - platform: state
+    entity_id: !input sensor_presenca
+    to: "off"
+    for:
+      seconds: !input tempo_ausencia
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ (not is_state(input.modo_bloqueio, 'on')) if input.modo_bloqueio else true }}
+
+  - condition: template
+    value_template: >-
+      {% set inicio = input.horario_inicio %}
+      {% set fim = input.horario_fim %}
+      {% if inicio and fim %}
+        {{ now().strftime('%H:%M:%S') >= inicio and now().strftime('%H:%M:%S') <= fim }}
+      {% else %}
+        true
+      {% endif %}
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ input.luzes | length > 0 }}"
+        sequence:
+          - service: light.turn_off
+            target:
+              entity_id: !input luzes
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ input.switches | length > 0 }}"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input switches
+
+mode: single
