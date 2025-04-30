@@ -2,7 +2,7 @@ blueprint:
   name: LUZES_E_SWITCHES_-_OFF_presença_hora(+)_modo(-)
   description: >
     Desliga luzes e switches após ausência de presença por um tempo definido.
-    Pode ser condicionado por horário e por um modo de bloqueio (input_boolean).
+    A automação só roda se estiver dentro do intervalo de horário configurado e o modo de bloqueio estiver desligado.
   domain: automation
   input:
     sensor_presenca:
@@ -16,8 +16,7 @@ blueprint:
             - presence
 
     luzes:
-      name: Luzes a desligar (opcional)
-      default: []
+      name: Luzes a desligar
       selector:
         entity:
           domain: light
@@ -43,21 +42,20 @@ blueprint:
 
     modo_bloqueio:
       name: Modo de bloqueio (input_boolean) — opcional
-      description: Se estiver ativado, a automação não será executada
       default: null
       selector:
         entity:
           domain: input_boolean
 
     horario_inicio:
-      name: Horário de início (opcional)
-      default: ""
+      name: Horário de início (formato 24h)
+      default: "00:00:00"
       selector:
         time: {}
 
     horario_fim:
-      name: Horário de fim (opcional)
-      default: ""
+      name: Horário de fim (formato 24h)
+      default: "23:59:59"
       selector:
         time: {}
 
@@ -71,32 +69,24 @@ trigger:
 condition:
   - condition: template
     value_template: >-
-      {{ (not is_state(input.modo_bloqueio, 'on')) if input.modo_bloqueio else true }}
+      {% set modo = inputs.modo_bloqueio %}
+      {{ not modo or not is_state(modo, 'on') }}
 
   - condition: template
     value_template: >-
-      {% set inicio = input.horario_inicio %}
-      {% set fim = input.horario_fim %}
-      {% if inicio and fim %}
-        {{ now().strftime('%H:%M:%S') >= inicio and now().strftime('%H:%M:%S') <= fim }}
-      {% else %}
-        true
-      {% endif %}
+      {% set inicio = inputs.horario_inicio %}
+      {% set fim = inputs.horario_fim %}
+      {{ now().strftime('%H:%M:%S') >= inicio and now().strftime('%H:%M:%S') <= fim }}
 
 action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ input.luzes | length > 0 }}"
-        sequence:
-          - service: light.turn_off
-            target:
-              entity_id: !input luzes
+  - service: light.turn_off
+    target:
+      entity_id: !input luzes
 
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ input.switches | length > 0 }}"
+            value_template: "{{ inputs.switches | length > 0 }}"
         sequence:
           - service: switch.turn_off
             target:
