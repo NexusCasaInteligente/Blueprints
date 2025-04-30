@@ -40,13 +40,13 @@ blueprint:
 
     horario_inicio:
       name: Horário de início
-      default: "06:00:00"
+      default: "00:00:00"
       selector:
         time: {}
 
     horario_fim:
       name: Horário de fim
-      default: "22:00:00"
+      default: "23:59:59"
       selector:
         time: {}
 
