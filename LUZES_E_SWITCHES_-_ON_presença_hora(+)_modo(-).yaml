@@ -1,5 +1,5 @@
 blueprint:
-  name: Ligar luzes e switches com presença e horário (bloqueio por modo)
+  name: LUZES_E_SWITCHES_-_ON_presença_hora(+)_modo(-)
   description: >
     Liga luzes e switches ao detectar presença, se estiver dentro do horário permitido
     e se um input_boolean (modo) de bloqueio estiver desligado.
