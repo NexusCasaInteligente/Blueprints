@@ -1,5 +1,5 @@
 blueprint:
-  name: Desligar luzes e switches após ausência de presença
+  name: LUZES_E_SWITCHES_-_OFF_presença_hora(+)_modo(-)
   description: >
     Desliga luzes e switches após ausência de presença por um tempo definido.
     Pode ser condicionado por horário e por um modo de bloqueio (input_boolean).
