@@ -1,5 +1,5 @@
 blueprint:
-  name: "NOTIFICAÇÃO - Porta aberta.yaml"
+  name: "NOTIFICAÇÃO - Porta aberta"
   description: "Envia notificações e anuncia via Alexa quando um sensor é acionado"
   domain: automation
   input:
