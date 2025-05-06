@@ -1,0 +1,82 @@
+blueprint:
+  name: "NOTIFICAÇÃO - Porta aberta"
+  description: "Envia notificações e anuncia via Alexa quando um sensor é acionado"
+  domain: automation
+  input:
+    sensor_entidade:
+      name: "Sensor de Porta/Armário"
+      description: "Selecione o sensor de contato que será monitorado"
+      selector:
+        entity:
+          domain: binary_sensor
+    modo_ausente:
+      name: "Entidade do Modo Ausente"
+      description: "Selecione a entidade que indica modo ausente (ex: input_boolean)"
+      selector:
+        entity:
+    celulares_notificar:
+      name: "Dispositivos para Notificar"
+      description: "Selecione os serviços de notificação mobile"
+      selector:
+        entity:
+          domain: notify
+          multiple: true
+    alexa_dispositivo:
+      name: "Dispositivo Alexa para Anunciar"
+      description: "Selecione o dispositivo Alexa que fará o anúncio"
+      selector:
+        entity:
+          domain: media_player
+          integration: alexa_media
+    mensagem_alexa:
+      name: "Frase para Alexa"
+      description: "O que a Alexa deve falar quando o sensor for acionado"
+      default: "Por favor, não abra o armário"
+      selector:
+        text:
+    mensagem_notificacao:
+      name: "Mensagem de Notificação"
+      description: "Texto da notificação (use {sensor} para o nome do sensor)"
+      default: "O {sensor} foi aberto"
+      selector:
+        text:
+
+trigger:
+  - platform: state
+    entity_id: !input sensor_entidade
+    to: "on"
+
+condition:
+  - condition: state
+    entity_id: !input modo_ausente
+    state: "on"
+
+action:
+  - parallel:
+      # Anúncio via Alexa
+      - service: script.turn_on
+        target:
+          entity_id: script.anunciar_via_alexa
+        data:
+          variables:
+            mensagem: !input mensagem_alexa
+            onde_anunciar: !input alexa_dispositivo
+            volume: 0.9
+      
+      # Notificações para celulares
+      - repeat:
+          for_each: !input celulares_notificar
+          sequence:
+            - service: notify.notify
+              target:
+                entity_id: "{{ repeat.item }}"
+              data:
+                message: >
+                  {{ 
+                    (input.mensagem_notificacao 
+                    | replace('{sensor}', states[input.sensor_entidade].name)
+                  )}}
+                title: "Alerta de Abertura"
+                data:
+                  importance: "high"
+                  sticky: true
