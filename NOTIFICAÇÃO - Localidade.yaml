@@ -15,12 +15,13 @@ blueprint:
       selector:
         entity:
           domain: zone
-    notify_service:
-      name: Serviço de Notificação
-      description: "Selecione o serviço de notificação (ex: notify.mobile_app_seu_celular)"
+    notify_device:
+      name: Dispositivo para notificar
+      description: "Selecione seu dispositivo móvel registrado no Home Assistant"
       selector:
-        entity:
-          domain: notify
+        device:
+          filter:
+            integration: mobile_app
     message_enter:
       name: "Mensagem de Entrada"
       description: "Mensagem quando a pessoa ENTRA na zona. Use {person} e {zone} como placeholders"
@@ -41,14 +42,10 @@ variables:
 trigger:
   - platform: state
     entity_id: !input person_entity
-    # Dispara quando a pessoa entra na zona
     to: "{{ states[input.zone_entity].name }}"
   - platform: state
     entity_id: !input person_entity
-    # Dispara quando a pessoa sai da zona
     from: "{{ states[input.zone_entity].name }}"
-
-condition: []
 
 action:
   - choose:
@@ -56,7 +53,7 @@ action:
           - condition: template
             value_template: "{{ trigger.to_state.state == zone_name }}"
         sequence:
-          - service: !input notify_service
+          - service: notify.mobile_app
             data:
               message: >
                 {{ 
@@ -64,11 +61,13 @@ action:
                   | replace('{person}', person_name) 
                   | replace('{zone}', zone_name))
                 }}
+            target:
+              device_id: !input notify_device
       - conditions:
           - condition: template
             value_template: "{{ trigger.from_state.state == zone_name }}"
         sequence:
-          - service: !input notify_service
+          - service: notify.mobile_app
             data:
               message: >
                 {{ 
@@ -76,3 +75,5 @@ action:
                   | replace('{person}', person_name) 
                   | replace('{zone}', zone_name))
                 }}
+            target:
+              device_id: !input notify_device
