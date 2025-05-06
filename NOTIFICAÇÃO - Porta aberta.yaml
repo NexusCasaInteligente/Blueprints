@@ -1,85 +1,77 @@
 blueprint:
-  name: "Alerta de Abertura com Notificação e Alexa"
-  description: "Envia notificações e anuncia via Alexa quando um sensor é acionado"
+  name: "Monitor Universal de Zonas"
+  description: "Notifica entrada/saída em QUALQUER zona cadastrada automaticamente"
   domain: automation
   input:
-    sensor_entidade:
-      name: "Sensor de Porta/Armário"
-      description: "Selecione o sensor de contato que será monitorado"
+    person_entity:
+      name: Pessoa para monitorar
+      description: "Selecione a entidade da pessoa a ser monitorada"
       selector:
         entity:
-          domain: binary_sensor
-    modo_ausente:
-      name: "Entidade do Modo Ausente"
-      description: "Selecione a entidade que indica modo ausente (ex: input_boolean)"
-      selector:
-        entity:
-    celulares_notificar:
-      name: "Dispositivos para Notificar"
-      description: "Selecione os dispositivos móveis que receberão notificações"
+          domain: person
+    notify_device:
+      name: Dispositivo para notificar
+      description: "Selecione seu dispositivo móvel registrado"
       selector:
         device:
-          integration: mobile_app
-          multiple: true
-    alexa_dispositivo:
-      name: "Dispositivo Alexa para Anunciar"
-      description: "Selecione o dispositivo Alexa que fará o anúncio"
-      selector:
-        entity:
-          domain: media_player
-          integration: alexa_media
-    mensagem_alexa:
-      name: "Frase para Alexa"
-      description: "O que a Alexa deve falar quando o sensor for acionado"
-      default: "Por favor, não abra o armário"
+          filter:
+            integration: mobile_app
+    message_enter:
+      name: "Modelo de mensagem de entrada"
+      description: "Use {person} para nome, {zone} para zona, {time} para horário"
+      default: "📍 {person} chegou em {zone} às {time}"
       selector:
         text:
-    mensagem_notificacao:
-      name: "Mensagem de Notificação"
-      description: "Texto da notificação (use {sensor} para o nome do sensor)"
-      default: "O {sensor} foi aberto"
+    message_leave:
+      name: "Modelo de mensagem de saída"
+      description: "Use {person} para nome, {zone} para zona, {time} para horário"
+      default: "🚪 {person} saiu de {zone} às {time}"
       selector:
         text:
+
+variables:
+  person_name: "{{ states[input.person_entity].name }}"
+  current_time: "{{ now().strftime('%H:%M') }}"
+  all_zones: "{{ state_attr('zone.home', 'friendly_name') | default([]) + state_attr('zone.work', 'friendly_name') | default([]) }}"
 
 trigger:
   - platform: state
-    entity_id: !input sensor_entidade
-    to: "on"
+    entity_id: !input person_entity
 
-condition:
-  - condition: state
-    entity_id: !input modo_ausente
-    state: "on"
+condition: >
+  {{ 
+    trigger.from_state.state != trigger.to_state.state and
+    (trigger.from_state.state in states.zone | map(attribute='name') or
+     trigger.to_state.state in states.zone | map(attribute='name'))
+  }}
 
 action:
-  - parallel:
-      # Anúncio via Alexa
-      - service: script.turn_on
-        target:
-          entity_id: script.anunciar_via_alexa
-        data:
-          variables:
-            mensagem: !input mensagem_alexa
-            onde_anunciar: !input alexa_dispositivo
-            volume: 0.9
-      
-      # Notificações para celulares
-      - repeat:
-          for_each: >
-            {{ expand(device_entities(input.celulares_notificar)) 
-               | selectattr('entity_id', 'match', '^notify\.mobile_app_') 
-               | map(attribute='entity_id') 
-               | list }}
-          sequence:
-            - service: notify.notify
-              target:
-                entity_id: "{{ repeat.item }}"
-              data:
-                message: >
-                  {{ 
-                    (input.mensagem_notificacao 
-                    | replace('{sensor}', states[input.sensor_entidade].name)
-                  )}}
-                title: "Alerta de Abertura"
-                data:
-                  importance: "high"
+  - choose:
+      - conditions: "{{ trigger.to_state.state in states.zone | map(attribute='name') }}"
+        sequence:
+          - service: notify.mobile_app
+            data:
+              message: >
+                {{
+                  (input.message_enter
+                  | replace('{person}', person_name)
+                  | replace('{zone}', trigger.to_state.state)
+                  | replace('{time}', current_time)
+                  )
+                }}
+            target:
+              device_id: !input notify_device
+      - conditions: "{{ trigger.from_state.state in states.zone | map(attribute='name') }}"
+        sequence:
+          - service: notify.mobile_app
+            data:
+              message: >
+                {{
+                  (input.message_leave
+                  | replace('{person}', person_name)
+                  | replace('{zone}', trigger.from_state.state)
+                  | replace('{time}', current_time)
+                  )
+                }}
+            target:
+              device_id: !input notify_device
