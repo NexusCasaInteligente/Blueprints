@@ -1,0 +1,61 @@
+blueprint:
+  name: "NOTIFICAÇÃO - Localidade"
+  description: "Envia uma notificação quando uma pessoa entra ou sai de uma zona específica."
+  domain: automation
+  input:
+    pessoa:
+      name: "Pessoa"
+      description: "Entidade da pessoa (ex: person.alessandra_pavan)"
+      selector:
+        entity:
+          domain: person
+    zona:
+      name: "Zona"
+      description: "Nome da zona (ex: 'Casa da Claudia')"
+      selector:
+        text:
+    dispositivo_notificacao:
+      name: "Dispositivo de Notificação"
+      description: "Serviço de notificação (ex: notify.mobile_app_moto_g_5g_2022)"
+      selector:
+        entity:
+          domain: notify
+    mensagem_entrada:
+      name: "Mensagem de Entrada"
+      description: "Mensagem quando a pessoa ENTRA na zona (ex: 'Chegou em Casa da Claudia')"
+      default: "Chegou em {zona}"
+      selector:
+        text:
+    mensagem_saida:
+      name: "Mensagem de Saída"
+      description: "Mensagem quando a pessoa SAI da zona (ex: 'Saiu de Casa da Claudia')"
+      default: "Saiu de {zona}"
+      selector:
+        text:
+
+trigger:
+  - platform: state
+    entity_id: !input pessoa
+    to: !input zona
+  - platform: state
+    entity_id: !input pessoa
+    from: !input zona
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == input.zona }}"
+        sequence:
+          - service: !input dispositivo_notificacao
+            data:
+              title: "Mudança de localidade:"
+              message: !input mensagem_entrada
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.from_state.state == input.zona }}"
+        sequence:
+          - service: !input dispositivo_notificacao
+            data:
+              title: "Mudança de localidade:"
+              message: !input mensagem_saida
