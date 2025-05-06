@@ -1,61 +1,78 @@
 blueprint:
-  name: "NOTIFICAÇÃO - Localidade"
-  description: "Envia uma notificação quando uma pessoa entra ou sai de uma zona específica."
+  name: "Notificação de Entrada/Saída de Zona"
+  description: "Envia notificação quando uma pessoa entra ou sai de uma zona específica"
   domain: automation
   input:
-    pessoa:
-      name: "Pessoa"
-      description: "Entidade da pessoa (ex: person.alessandra_pavan)"
+    person_entity:
+      name: Pessoa
+      description: "Selecione a entidade da pessoa"
       selector:
         entity:
           domain: person
-    zona:
-      name: "Zona"
-      description: "Nome da zona (ex: 'Casa da Claudia')"
+    zone_entity:
+      name: Zona
+      description: "Selecione a entidade da zona"
       selector:
-        text:
-    dispositivo_notificacao:
-      name: "Dispositivo de Notificação"
-      description: "Serviço de notificação (ex: notify.mobile_app_moto_g_5g_2022)"
+        entity:
+          domain: zone
+    notify_service:
+      name: Serviço de Notificação
+      description: "Selecione o serviço de notificação (ex: notify.mobile_app_seu_celular)"
       selector:
         entity:
           domain: notify
-    mensagem_entrada:
+    message_enter:
       name: "Mensagem de Entrada"
-      description: "Mensagem quando a pessoa ENTRA na zona (ex: 'Chegou em Casa da Claudia')"
-      default: "Chegou em {zona}"
+      description: "Mensagem quando a pessoa ENTRA na zona. Use {person} e {zone} como placeholders"
+      default: "{person} entrou na zona {zone}"
       selector:
         text:
-    mensagem_saida:
+    message_leave:
       name: "Mensagem de Saída"
-      description: "Mensagem quando a pessoa SAI da zona (ex: 'Saiu de Casa da Claudia')"
-      default: "Saiu de {zona}"
+      description: "Mensagem quando a pessoa SAI da zona. Use {person} e {zone} como placeholders"
+      default: "{person} saiu da zona {zone}"
       selector:
         text:
 
+variables:
+  person_name: "{{ states[input.person_entity].name }}"
+  zone_name: "{{ states[input.zone_entity].name }}"
+
 trigger:
   - platform: state
-    entity_id: !input pessoa
-    to: !input zona
+    entity_id: !input person_entity
+    # Dispara quando a pessoa entra na zona
+    to: "{{ states[input.zone_entity].name }}"
   - platform: state
-    entity_id: !input pessoa
-    from: !input zona
+    entity_id: !input person_entity
+    # Dispara quando a pessoa sai da zona
+    from: "{{ states[input.zone_entity].name }}"
+
+condition: []
 
 action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.to_state.state == input.zona }}"
+            value_template: "{{ trigger.to_state.state == zone_name }}"
         sequence:
-          - service: !input dispositivo_notificacao
+          - service: !input notify_service
             data:
-              title: "Mudança de localidade:"
-              message: !input mensagem_entrada
+              message: >
+                {{ 
+                  (input.message_enter 
+                  | replace('{person}', person_name) 
+                  | replace('{zone}', zone_name))
+                }}
       - conditions:
           - condition: template
-            value_template: "{{ trigger.from_state.state == input.zona }}"
+            value_template: "{{ trigger.from_state.state == zone_name }}"
         sequence:
-          - service: !input dispositivo_notificacao
+          - service: !input notify_service
             data:
-              title: "Mudança de localidade:"
-              message: !input mensagem_saida
+              message: >
+                {{ 
+                  (input.message_leave 
+                  | replace('{person}', person_name) 
+                  | replace('{zone}', zone_name))
+                }}
