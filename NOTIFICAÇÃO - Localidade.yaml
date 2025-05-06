@@ -1,5 +1,5 @@
 blueprint:
-  name: "Monitor Universal de Zonas"
+  name: "NOTIFICAÇÃO - Localidade"
   description: "Notifica entrada/saída em QUALQUER zona cadastrada automaticamente"
   domain: automation
   input:
