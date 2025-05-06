@@ -1,79 +1,77 @@
 blueprint:
-  name: "Notificação de Entrada/Saída de Zona"
-  description: "Envia notificação quando uma pessoa entra ou sai de uma zona específica"
+  name: "Monitor Universal de Zonas"
+  description: "Notifica entrada/saída em QUALQUER zona cadastrada automaticamente"
   domain: automation
   input:
     person_entity:
-      name: Pessoa
-      description: "Selecione a entidade da pessoa"
+      name: Pessoa para monitorar
+      description: "Selecione a entidade da pessoa a ser monitorada"
       selector:
         entity:
           domain: person
-    zone_entity:
-      name: Zona
-      description: "Selecione a entidade da zona"
-      selector:
-        entity:
-          domain: zone
     notify_device:
       name: Dispositivo para notificar
-      description: "Selecione seu dispositivo móvel registrado no Home Assistant"
+      description: "Selecione seu dispositivo móvel registrado"
       selector:
         device:
           filter:
             integration: mobile_app
     message_enter:
-      name: "Mensagem de Entrada"
-      description: "Mensagem quando a pessoa ENTRA na zona. Use {person} e {zone} como placeholders"
-      default: "{person} entrou na zona {zone}"
+      name: "Modelo de mensagem de entrada"
+      description: "Use {person} para nome, {zone} para zona, {time} para horário"
+      default: "📍 {person} chegou em {zone} às {time}"
       selector:
         text:
     message_leave:
-      name: "Mensagem de Saída"
-      description: "Mensagem quando a pessoa SAI da zona. Use {person} e {zone} como placeholders"
-      default: "{person} saiu da zona {zone}"
+      name: "Modelo de mensagem de saída"
+      description: "Use {person} para nome, {zone} para zona, {time} para horário"
+      default: "🚪 {person} saiu de {zone} às {time}"
       selector:
         text:
 
 variables:
   person_name: "{{ states[input.person_entity].name }}"
-  zone_name: "{{ states[input.zone_entity].name }}"
+  current_time: "{{ now().strftime('%H:%M') }}"
+  all_zones: "{{ state_attr('zone.home', 'friendly_name') | default([]) + state_attr('zone.work', 'friendly_name') | default([]) }}"
 
 trigger:
   - platform: state
     entity_id: !input person_entity
-    to: "{{ states[input.zone_entity].name }}"
-  - platform: state
-    entity_id: !input person_entity
-    from: "{{ states[input.zone_entity].name }}"
+
+condition: >
+  {{ 
+    trigger.from_state.state != trigger.to_state.state and
+    (trigger.from_state.state in states.zone | map(attribute='name') or
+     trigger.to_state.state in states.zone | map(attribute='name'))
+  }}
 
 action:
   - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state == zone_name }}"
+      - conditions: "{{ trigger.to_state.state in states.zone | map(attribute='name') }}"
         sequence:
           - service: notify.mobile_app
             data:
               message: >
-                {{ 
-                  (input.message_enter 
-                  | replace('{person}', person_name) 
-                  | replace('{zone}', zone_name))
+                {{
+                  (input.message_enter
+                  | replace('{person}', person_name)
+                  | replace('{zone}', trigger.to_state.state)
+                  | replace('{time}', current_time)
+                  )
                 }}
             target:
               device_id: !input notify_device
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.from_state.state == zone_name }}"
+      - conditions: "{{ trigger.from_state.state in states.zone | map(attribute='name') }}"
         sequence:
           - service: notify.mobile_app
             data:
               message: >
-                {{ 
-                  (input.message_leave 
-                  | replace('{person}', person_name) 
-                  | replace('{zone}', zone_name))
+                {{
+                  (input.message_leave
+                  | replace('{person}', person_name)
+                  | replace('{zone}', trigger.from_state.state)
+                  | replace('{time}', current_time)
+                  )
                 }}
             target:
               device_id: !input notify_device
