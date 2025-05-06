@@ -1,5 +1,5 @@
 blueprint:
-  name: "NOTIFICAÇÃO - Porta aberta"
+  name: "Alerta de Abertura com Notificação e Alexa"
   description: "Envia notificações e anuncia via Alexa quando um sensor é acionado"
   domain: automation
   input:
@@ -16,10 +16,10 @@ blueprint:
         entity:
     celulares_notificar:
       name: "Dispositivos para Notificar"
-      description: "Selecione os serviços de notificação mobile"
+      description: "Selecione os dispositivos móveis que receberão notificações"
       selector:
-        entity:
-          domain: notify
+        device:
+          integration: mobile_app
           multiple: true
     alexa_dispositivo:
       name: "Dispositivo Alexa para Anunciar"
@@ -65,7 +65,11 @@ action:
       
       # Notificações para celulares
       - repeat:
-          for_each: !input celulares_notificar
+          for_each: >
+            {{ expand(device_entities(input.celulares_notificar)) 
+               | selectattr('entity_id', 'match', '^notify\.mobile_app_') 
+               | map(attribute='entity_id') 
+               | list }}
           sequence:
             - service: notify.notify
               target:
@@ -79,4 +83,3 @@ action:
                 title: "Alerta de Abertura"
                 data:
                   importance: "high"
-                  sticky: true
