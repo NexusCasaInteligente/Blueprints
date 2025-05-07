@@ -4,22 +4,22 @@ blueprint:
   domain: automation
   input:
     tarefas:
-      name: "Configurar Tarefas"
-      description: "Adicione cada tarefa com contador, booleano e dias de alerta"
+      name: "Lista de Tarefas"
+      description: "Adicione cada tarefa com contador, booleano e dias mínimos"
       selector:
         object:
           schema:
             contador:
-              name: "Entidade do Contador"
+              name: "Contador"
               selector:
                 entity:
                   domain: counter
             booleano:
-              name: "Entidade Booleana"
+              name: "Booleano"
               selector:
                 entity:
                   domain: input_boolean
-            dias_alerta:
+            dias_minimos:
               name: "Dias para Ativar"
               selector:
                 number:
@@ -27,19 +27,20 @@ blueprint:
                   max: 365
                   step: 1
       default: []
-      required: true
 
 trigger:
   - platform: state
-    entity_id: !input tarefas contador
+    entity_id: !input "tarefas.contador"
 
-condition: []
 action:
   - choose:
-      - conditions: "{{ states(trigger.entity_id)|int >= trigger.dias_alerta }}"
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set config = tarefas|selectattr('contador', 'equalto', trigger.entity_id)|list|first %}
+              {{ states(trigger.entity_id)|int >= (config.dias_minimos|int) }}
         sequence:
           - service: input_boolean.turn_on
             target:
-              entity_id: !input tarefas booleano
-            data: {}
+              entity_id: "{{ config.booleano }}"
 mode: queued
