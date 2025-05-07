@@ -1,0 +1,34 @@
+blueprint:
+  name: "Resetar Contadores de Tarefas"
+  description: "Zera contador quando booleano é desligado"
+  domain: automation
+  input:
+    pares_reset:
+      name: "Configurar Pares para Reset"
+      description: "Adicione cada par booleano + contador"
+      selector:
+        object:
+          schema:
+            booleano:
+              name: "Entidade Booleana"
+              selector:
+                entity:
+                  domain: input_boolean
+            contador:
+              name: "Entidade do Contador"
+              selector:
+                entity:
+                  domain: counter
+      default: []
+      required: true
+
+trigger:
+  - platform: state
+    entity_id: !input pares_reset booleano
+    to: "off"
+
+action:
+  - service: counter.reset
+    target:
+      entity_id: !input pares_reset contador
+mode: queued
