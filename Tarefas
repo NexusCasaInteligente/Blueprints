@@ -1,13 +1,14 @@
 blueprint:
-  name: "Tarefas"
-  description: "Incrementa um contador diariamente e ativa um lembrete (booleano) após X dias. Zera ao desligar o lembrete."
+  name: "Contador de Dias sem Tarefa (Usando Counter)"
+  description: "Incrementa um counter diariamente e ativa um lembrete (booleano) após X dias. Zera ao desligar o lembrete."
   domain: automation
   input:
     contador:
-      name: "Entidade do Contador (input_number)"
+      name: "Entidade do Counter"
+      description: "Ex.: counter.dias_sem_varrer_a_casa"
       selector:
         entity:
-          domain: input_number
+          domain: counter
     booleano:
       name: "Entidade do Lembrete (input_boolean)"
       selector:
@@ -23,44 +24,41 @@ blueprint:
           step: 1
 
 trigger:
-  # Incrementa o contador diariamente à meia-noite
+  # Incrementa o counter diariamente à meia-noite
   - platform: time
     at: "00:00:00"
-  # Monitora quando o booleano é desligado (para zerar o contador)
+  # Monitora quando o booleano é desligado (para zerar o counter)
   - platform: state
     entity_id: !input booleano
     from: "on"
     to: "off"
 
-condition: []
 action:
-  # Se o gatilho for meia-noite: incrementa o contador
+  # Se o gatilho for meia-noite: incrementa o counter
   - choose:
       - conditions:
           - condition: trigger
             id: "time"
         sequence:
-          - service: input_number.increment
+          - service: counter.increment
             target:
               entity_id: !input contador
-  # Se o gatilho for desligar o booleano: zera o contador
+  # Se o gatilho for desligar o booleano: zera o counter
   - choose:
       - conditions:
           - condition: trigger
             id: "state"
         sequence:
-          - service: input_number.set_value
+          - service: counter.reset
             target:
               entity_id: !input contador
-            data:
-              value: 0
-  # Se contador >= dias_para_lembrete, liga o booleano
+  # Se counter >= dias_para_lembrete, liga o booleano (e evita repetição)
   - choose:
       - conditions:
           - condition: template
             value_template: "{{ states(('input_boolean.' + (input.booleano.split('.')[1])) == 'off' }}"
           - condition: template
-            value_template: "{{ states(('input_number.' + (input.contador.split('.')[1])) | int >= input.dias_para_lembrete }}"
+            value_template: "{{ states(('counter.' + (input.contador.split('.')[1])) | int >= input.dias_para_lembrete }}"
         sequence:
           - service: input_boolean.turn_on
             target:
