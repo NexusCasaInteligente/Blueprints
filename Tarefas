@@ -1,21 +1,22 @@
 blueprint:
-  name: "Contador de Dias sem Tarefa (Usando Counter)"
-  description: "Incrementa um counter diariamente e ativa um lembrete (booleano) após X dias. Zera ao desligar o lembrete."
+  name: "Contador de Dias sem Tarefa (Counter)"
+  description: "Incrementa um counter diariamente e ativa um lembrete após X dias. Zera quando o lembrete é desligado."
   domain: automation
   input:
     contador:
       name: "Entidade do Counter"
-      description: "Ex.: counter.dias_sem_varrer_a_casa"
+      description: "Ex: counter.dias_sem_varrer_a_casa"
       selector:
         entity:
           domain: counter
     booleano:
-      name: "Entidade do Lembrete (input_boolean)"
+      name: "Entidade do Lembrete"
+      description: "Ex: input_boolean.varrer_a_casa"
       selector:
         entity:
           domain: input_boolean
     dias_para_lembrete:
-      name: "Dias para ativar o lembrete"
+      name: "Dias para ativar lembrete"
       default: 7
       selector:
         number:
@@ -24,17 +25,17 @@ blueprint:
           step: 1
 
 trigger:
-  # Incrementa o counter diariamente à meia-noite
+  # Incrementa diariamente
   - platform: time
     at: "00:00:00"
-  # Monitora quando o booleano é desligado (para zerar o counter)
+  # Detecta quando desliga o booleano
   - platform: state
     entity_id: !input booleano
     from: "on"
     to: "off"
 
 action:
-  # Se o gatilho for meia-noite: incrementa o counter
+  # Ação 1: Incrementa counter diariamente
   - choose:
       - conditions:
           - condition: trigger
@@ -43,7 +44,8 @@ action:
           - service: counter.increment
             target:
               entity_id: !input contador
-  # Se o gatilho for desligar o booleano: zera o counter
+
+  # Ação 2: Reseta counter quando desliga booleano
   - choose:
       - conditions:
           - condition: trigger
@@ -52,13 +54,14 @@ action:
           - service: counter.reset
             target:
               entity_id: !input contador
-  # Se counter >= dias_para_lembrete, liga o booleano (e evita repetição)
+
+  # Ação 3: Liga booleano quando atinge X dias
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ states(('input_boolean.' + (input.booleano.split('.')[1])) == 'off' }}"
+            value_template: "{{ states(input.booleano) == 'off' }}"
           - condition: template
-            value_template: "{{ states(('counter.' + (input.contador.split('.')[1])) | int >= input.dias_para_lembrete }}"
+            value_template: "{{ states(input.contador)|int >= input.dias_para_lembrete }}"
         sequence:
           - service: input_boolean.turn_on
             target:
