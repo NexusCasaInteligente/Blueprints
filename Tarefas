@@ -1,0 +1,67 @@
+blueprint:
+  name: "Tarefas"
+  description: "Incrementa um contador diariamente e ativa um lembrete (booleano) após X dias. Zera ao desligar o lembrete."
+  domain: automation
+  input:
+    contador:
+      name: "Entidade do Contador (input_number)"
+      selector:
+        entity:
+          domain: input_number
+    booleano:
+      name: "Entidade do Lembrete (input_boolean)"
+      selector:
+        entity:
+          domain: input_boolean
+    dias_para_lembrete:
+      name: "Dias para ativar o lembrete"
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 365
+          step: 1
+
+trigger:
+  # Incrementa o contador diariamente à meia-noite
+  - platform: time
+    at: "00:00:00"
+  # Monitora quando o booleano é desligado (para zerar o contador)
+  - platform: state
+    entity_id: !input booleano
+    from: "on"
+    to: "off"
+
+condition: []
+action:
+  # Se o gatilho for meia-noite: incrementa o contador
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "time"
+        sequence:
+          - service: input_number.increment
+            target:
+              entity_id: !input contador
+  # Se o gatilho for desligar o booleano: zera o contador
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "state"
+        sequence:
+          - service: input_number.set_value
+            target:
+              entity_id: !input contador
+            data:
+              value: 0
+  # Se contador >= dias_para_lembrete, liga o booleano
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states(('input_boolean.' + (input.booleano.split('.')[1])) == 'off' }}"
+          - condition: template
+            value_template: "{{ states(('input_number.' + (input.contador.split('.')[1])) | int >= input.dias_para_lembrete }}"
+        sequence:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input booleano
