@@ -1,15 +1,39 @@
 blueprint:
-  name: "Tarefas"
-  description: "Automação de tarefas diárias
+  name: Espanar a Casa - Versão Parametrizável
+  description: Liga o input_boolean após um número configurável de dias, com reset manual ao desligar.
   domain: automation
-  input: {}
+  input:
+    boolean_alvo:
+      name: Input Boolean
+      description: O input_boolean que será ligado após X dias
+      selector:
+        entity:
+          domain: input_boolean
+
+    contador:
+      name: Contador
+      description: Contador que será incrementado diariamente e resetado ao desligar o boolean
+      selector:
+        entity:
+          domain: counter
+
+    dias_para_ativar:
+      name: Dias para Ativar
+      description: Quantidade de dias para acionar o input_boolean
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 30
+          unit_of_measurement: dias
+          mode: slider
 
 trigger:
   - platform: time
     at: "00:01:00"
     id: incrementar
   - platform: state
-    entity_id: input_boolean.espanar_a_casa
+    entity_id: !input boolean_alvo
     from: "on"
     to: "off"
     id: resetar
@@ -22,9 +46,9 @@ action:
         sequence:
           - service: counter.increment
             target:
-              entity_id: counter.espanar_a_casa
+              entity_id: !input contador
           - delay: "00:00:01"
-  
+
   - choose:
       - conditions:
           - condition: trigger
@@ -32,21 +56,21 @@ action:
         sequence:
           - service: counter.reset
             target:
-              entity_id: counter.espanar_a_casa
-  
-  - if:
-      - condition: or
-        conditions:
-          - condition: trigger
-            id: incrementar
-          - condition: trigger
-            id: resetar
-      - condition: state
-        entity_id: input_boolean.espanar_a_casa
-        state: "off"
-      - condition: template
-        value_template: "{{ states('counter.espanar_a_casa')|int >= 7 }}"
-    then:
-      - service: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.espanar_a_casa
+              entity_id: !input contador
+
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: incrementar
+              - condition: trigger
+                id: resetar
+          - condition: template
+            value_template: "{{ is_state(input.boolean_alvo, 'off') }}"
+          - condition: template
+            value_template: "{{ states(input.contador)|int >= (input.dias_para_ativar|int) }}"
+        sequence:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input boolean_alvo
