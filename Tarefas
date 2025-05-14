@@ -30,7 +30,7 @@ blueprint:
 
 trigger:
   - platform: time
-    at: "00:01:00"
+    at: "06:40:00"
     id: incrementar
   - platform: state
     entity_id: !input boolean_alvo
