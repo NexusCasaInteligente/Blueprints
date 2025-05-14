@@ -1,7 +1,7 @@
 blueprint:
   name: Gerenciar rotina de espanar a casa
   description: >
-    Incrementa um contador diariamente, ativa um input_boolean ao atingir um limite
+    Incrementa um contador diariamente, ativa um input_boolean ao atingir um limite,
     e reseta o contador quando o booleano for desligado.
   domain: automation
   input:
@@ -36,31 +36,31 @@ blueprint:
 trigger:
   - platform: time
     at: !input horario_incremento
+    id: incremento
   - platform: numeric_state
     entity_id: !input counter_entity
     above: !input limite_contador
+    id: limite
   - platform: state
     entity_id: !input boolean_entity
     to: "off"
+    id: resetar
 
 condition: []
 
 action:
   - choose:
-      # Incrementa o contador no horário definido
       - conditions:
-          - condition: time
-            at: !input horario_incremento
+          - condition: template
+            value_template: "{{ trigger.id == 'incremento' }}"
         sequence:
           - service: counter.increment
             target:
               entity_id: !input counter_entity
 
-      # Liga o booleano ao atingir o limite
       - conditions:
-          - condition: numeric_state
-            entity_id: !input counter_entity
-            above: !input limite_contador
+          - condition: template
+            value_template: "{{ trigger.id == 'limite' }}"
           - condition: state
             entity_id: !input boolean_entity
             state: "off"
@@ -69,11 +69,9 @@ action:
             target:
               entity_id: !input boolean_entity
 
-      # Reseta o contador quando o booleano for desligado
       - conditions:
-          - condition: state
-            entity_id: !input boolean_entity
-            state: "off"
+          - condition: template
+            value_template: "{{ trigger.id == 'resetar' }}"
         sequence:
           - service: counter.reset
             target:
