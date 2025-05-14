@@ -73,11 +73,3 @@ action:
                 id: incrementar
               - condition: trigger
                 id: resetar
-          - condition: template
-            value_template: "{{ is_state(input.boolean_alvo, 'off') }}"
-          - condition: template
-            value_template: "{{ states(input.contador)|int >= input.dias_para_ativar|int }}"
-        sequence:
-          - service: input_boolean.turn_on
-            target:
-              entity_id: !input boolean_alvo
