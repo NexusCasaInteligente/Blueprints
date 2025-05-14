@@ -1,8 +1,9 @@
 blueprint:
   name: Gerenciar rotina de espanar a casa
   description: >
-    Incrementa um contador diariamente, ativa um input_boolean ao atingir um limite,
-    e reseta o contador quando o booleano for desligado.
+    Incrementa um contador diariamente em um horário definido. 
+    Quando o valor do contador atingir ou ultrapassar o limite, liga um input_boolean. 
+    Quando o input_boolean for desligado, reseta o contador para zero.
   domain: automation
   input:
     counter_entity:
@@ -47,27 +48,39 @@ condition: []
 
 action:
   - choose:
+      # Incremento diário + verificação após delay
       - conditions:
           - condition: template
-            value_template: >
-              {{ trigger.platform == 'time' }}
+            value_template: "{{ trigger.platform == 'time' }}"
         sequence:
           - service: counter.increment
             target:
               entity_id: !input counter_entity
-
-      - conditions:
+          - delay: "00:00:05"
+          - variables:
+              contador_valor: "{{ states[inputs.counter_entity] | int }}"
           - condition: template
-            value_template: >
-              {{ trigger.platform == 'numeric_state' }}
+            value_template: "{{ contador_valor >= (inputs.limite_contador | int) }}"
           - condition: state
             entity_id: !input boolean_entity
-            state: 'off'
+            state: "off"
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input boolean_entity
+
+      # Ativação tardia por outro trigger
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'numeric_state' }}"
+          - condition: state
+            entity_id: !input boolean_entity
+            state: "off"
         sequence:
           - service: input_boolean.turn_on
             target:
               entity_id: !input boolean_entity
 
+      # Reset ao desligar booleano
       - conditions:
           - condition: template
             value_template: >
