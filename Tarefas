@@ -1,5 +1,5 @@
 blueprint:
-  name: "Contador de Dias sem Tarefa (Counter)"
+  name: "Tarefas"
   description: "Incrementa um counter diariamente e ativa um lembrete após X dias. Zera quando o lembrete é desligado."
   domain: automation
   input:
@@ -25,44 +25,53 @@ blueprint:
           step: 1
 
 trigger:
-  # Incrementa diariamente
+  # Gatilho 1: Incrementa diariamente
   - platform: time
     at: "00:00:00"
-  # Detecta quando desliga o booleano
+    id: "incrementar"
+  
+  # Gatilho 2: Detecta quando desliga o booleano
   - platform: state
     entity_id: !input booleano
     from: "on"
     to: "off"
+    id: "resetar"
 
 action:
-  # Ação 1: Incrementa counter diariamente
-  - choose:
-      - conditions:
-          - condition: trigger
-            id: "time"
-        sequence:
-          - service: counter.increment
-            target:
-              entity_id: !input contador
+  # Ação 1: Incrementa counter quando meia-noite
+  - if:
+      - condition: trigger
+        id: "incrementar"
+    then:
+      - service: counter.increment
+        target:
+          entity_id: !input contador
+      - delay: "00:00:01"  # Pequeno delay para garantir processamento
 
   # Ação 2: Reseta counter quando desliga booleano
-  - choose:
-      - conditions:
-          - condition: trigger
-            id: "state"
-        sequence:
-          - service: counter.reset
-            target:
-              entity_id: !input contador
+  - if:
+      - condition: trigger
+        id: "resetar"
+    then:
+      - service: counter.reset
+        target:
+          entity_id: !input contador
 
-  # Ação 3: Liga booleano quando atinge X dias
-  - choose:
-      - conditions:
+  # Ação 3: Verificação diária do lembrete
+  - if:
+      - condition: or
+        conditions:
+          - condition: trigger
+            id: "incrementar"
+          - condition: trigger
+            id: "resetar"
+    then:
+      - if:
           - condition: template
             value_template: "{{ states(input.booleano) == 'off' }}"
           - condition: template
-            value_template: "{{ states(input.contador)|int >= input.dias_para_lembrete }}"
-        sequence:
+            value_template: "{{ state_attr(input.contador, 'value')|int >= input.dias_para_lembrete }}"
+        then:
           - service: input_boolean.turn_on
             target:
               entity_id: !input booleano
