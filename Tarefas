@@ -36,23 +36,21 @@ blueprint:
 trigger:
   - platform: time
     at: !input horario_incremento
-    id: incremento
   - platform: numeric_state
     entity_id: !input counter_entity
     above: !input limite_contador
-    id: limite
   - platform: state
     entity_id: !input boolean_entity
     to: "off"
-    id: resetar
 
 condition: []
 
-action:  # <<< ESTA É A FORMA CORRETA
+action:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.id == 'incremento' }}"
+            value_template: >
+              {{ trigger.platform == 'time' }}
         sequence:
           - service: counter.increment
             target:
@@ -60,10 +58,11 @@ action:  # <<< ESTA É A FORMA CORRETA
 
       - conditions:
           - condition: template
-            value_template: "{{ trigger.id == 'limite' }}"
+            value_template: >
+              {{ trigger.platform == 'numeric_state' }}
           - condition: state
             entity_id: !input boolean_entity
-            state: "off"
+            state: 'off'
         sequence:
           - service: input_boolean.turn_on
             target:
@@ -71,7 +70,8 @@ action:  # <<< ESTA É A FORMA CORRETA
 
       - conditions:
           - condition: template
-            value_template: "{{ trigger.id == 'resetar' }}"
+            value_template: >
+              {{ trigger.platform == 'state' and trigger.to_state.state == 'off' }}
         sequence:
           - service: counter.reset
             target:
