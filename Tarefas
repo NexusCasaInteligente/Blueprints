@@ -1,6 +1,6 @@
 blueprint:
   name: Espanar a Casa - Versão Parametrizável
-  description: Liga o input_boolean após um número configurável de dias, com reset manual ao desligar.
+  description: Liga o input_boolean após um número configurável de dias, com reset manual ao desligar. Inclui horário de execução configurável.
   domain: automation
   input:
     boolean_alvo:
@@ -28,9 +28,16 @@ blueprint:
           unit_of_measurement: dias
           mode: slider
 
+    horario_execucao:
+      name: Horário de Execução Diária
+      description: Horário em que o contador será incrementado (formato HH:MM:SS)
+      default: "00:01:00"
+      selector:
+        time: {}
+
 trigger:
   - platform: time
-    at: "06:40:00"
+    at: !input horario_execucao
     id: incrementar
   - platform: state
     entity_id: !input boolean_alvo
@@ -69,7 +76,7 @@ action:
           - condition: template
             value_template: "{{ is_state(input.boolean_alvo, 'off') }}"
           - condition: template
-            value_template: "{{ states(input.contador)|int >= (input.dias_para_ativar|int) }}"
+            value_template: "{{ states(input.contador)|int >= input.dias_para_ativar|int }}"
         sequence:
           - service: input_boolean.turn_on
             target:
