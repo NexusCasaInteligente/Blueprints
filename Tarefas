@@ -1,77 +1,57 @@
 blueprint:
-  name: "Tarefas"
-  description: "Incrementa um counter diariamente e ativa um lembrete após X dias. Zera quando o lembrete é desligado."
+  name: "Espanar a casa - Versão Funcional"
+  description: "Automação para controlar o contador de espanar a casa"
   domain: automation
-  input:
-    contador:
-      name: "Entidade do Counter"
-      description: "Ex: counter.dias_sem_varrer_a_casa"
-      selector:
-        entity:
-          domain: counter
-    booleano:
-      name: "Entidade do Lembrete"
-      description: "Ex: input_boolean.varrer_a_casa"
-      selector:
-        entity:
-          domain: input_boolean
-    dias_para_lembrete:
-      name: "Dias para ativar lembrete"
-      default: 7
-      selector:
-        number:
-          min: 1
-          max: 365
-          step: 1
+  input: {}
 
-trigger:
-  # Gatilho 1: Incrementa diariamente
+trigger_variables:
+  incrementar: null
+  resetar: null
+
+triggers:
   - platform: time
-    at: "00:00:00"
+    at: "00:01:00"
     id: "incrementar"
-  
-  # Gatilho 2: Detecta quando desliga o booleano
   - platform: state
-    entity_id: !input booleano
+    entity_id: input_boolean.espanar_a_casa
     from: "on"
     to: "off"
     id: "resetar"
 
 action:
-  # Ação 1: Incrementa counter quando meia-noite
-  - if:
-      - condition: trigger
-        id: "incrementar"
-    then:
-      - service: counter.increment
-        target:
-          entity_id: !input contador
-      - delay: "00:00:01"  # Pequeno delay para garantir processamento
-
-  # Ação 2: Reseta counter quando desliga booleano
-  - if:
-      - condition: trigger
-        id: "resetar"
-    then:
-      - service: counter.reset
-        target:
-          entity_id: !input contador
-
-  # Ação 3: Verificação diária do lembrete
-  - if:
-      - condition: or
-        conditions:
+  - choose:
+      - conditions:
           - condition: trigger
             id: "incrementar"
+        sequence:
+          - service: counter.increment
+            target:
+              entity_id: counter.espanar_a_casa
+          - delay: "00:00:01"
+  
+  - choose:
+      - conditions:
           - condition: trigger
             id: "resetar"
-    then:
-      - if:
+        sequence:
+          - service: counter.reset
+            target:
+              entity_id: counter.espanar_a_casa
+  
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: "incrementar"
+              - condition: trigger
+                id: "resetar"
+          - condition: state
+            entity_id: input_boolean.espanar_a_casa
+            state: "off"
           - condition: template
-            value_template: "{{ states(input.booleano) == 'off' }}"
-          - condition: template
-            value_template: "{{ state_attr(input.contador, 'value')|int >= input.dias_para_lembrete }}"
-        then:
+            value_template: "{{ states('counter.espanar_a_casa')|int >= 7 }}"
+        sequence:
           - service: input_boolean.turn_on
             target:
-              entity_id: !input booleano
+              entity_id: input_boolean.espanar_a_casa
