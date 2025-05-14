@@ -1,6 +1,6 @@
 blueprint:
-  name: "Espanar a casa - Versão Funcional"
-  description: "Automação para controlar o contador de espanar a casa"
+  name: "Tarefas"
+  description: "Automação de tarefas diárias"
   domain: automation
   input: {}
 
