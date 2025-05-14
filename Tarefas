@@ -1,75 +1,82 @@
 blueprint:
-  name: Espanar a Casa - Versão Parametrizável
-  description: Liga o input_boolean após um número configurável de dias, com reset manual ao desligar. Inclui horário de execução configurável.
+  name: Gerenciar rotina de espanar a casa
+  description: >
+    Incrementa um contador diariamente, ativa um input_boolean ao atingir um limite
+    e reseta o contador quando o booleano for desligado.
   domain: automation
   input:
-    boolean_alvo:
-      name: Input Boolean
-      description: O input_boolean que será ligado após X dias
-      selector:
-        entity:
-          domain: input_boolean
-
-    contador:
+    counter_entity:
       name: Contador
-      description: Contador que será incrementado diariamente e resetado ao desligar o boolean
+      description: Entidade do tipo counter que será incrementada.
       selector:
         entity:
           domain: counter
-
-    dias_para_ativar:
-      name: Dias para Ativar
-      description: Quantidade de dias para acionar o input_boolean
+    boolean_entity:
+      name: Booleano
+      description: Entidade do tipo input_boolean que será ligada ao atingir o limite.
+      selector:
+        entity:
+          domain: input_boolean
+    limite_contador:
+      name: Limite do contador
+      description: Valor do contador que ativará o booleano.
       default: 7
       selector:
         number:
           min: 1
-          max: 30
+          max: 365
           unit_of_measurement: dias
-          mode: slider
-
-    horario_execucao:
-      name: Horário de Execução Diária
-      description: Horário em que o contador será incrementado (formato HH:MM:SS)
-      default: "00:01:00"
+    horario_incremento:
+      name: Horário diário de incremento
+      description: Horário em que o contador será incrementado todos os dias.
+      default: "00:00:00"
       selector:
-        time: {}
+        time:
 
 trigger:
   - platform: time
-    at: !input horario_execucao
-    id: incrementar
+    at: !input horario_incremento
+  - platform: numeric_state
+    entity_id: !input counter_entity
+    above: !input limite_contador
   - platform: state
-    entity_id: !input boolean_alvo
-    from: "on"
+    entity_id: !input boolean_entity
     to: "off"
-    id: resetar
+
+condition: []
 
 action:
   - choose:
+      # Incrementa o contador no horário definido
       - conditions:
-          - condition: trigger
-            id: incrementar
+          - condition: time
+            at: !input horario_incremento
         sequence:
           - service: counter.increment
             target:
-              entity_id: !input contador
-          - delay: "00:00:01"
+              entity_id: !input counter_entity
 
-  - choose:
+      # Liga o booleano ao atingir o limite
       - conditions:
-          - condition: trigger
-            id: resetar
+          - condition: numeric_state
+            entity_id: !input counter_entity
+            above: !input limite_contador
+          - condition: state
+            entity_id: !input boolean_entity
+            state: "off"
+        sequence:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input boolean_entity
+
+      # Reseta o contador quando o booleano for desligado
+      - conditions:
+          - condition: state
+            entity_id: !input boolean_entity
+            state: "off"
         sequence:
           - service: counter.reset
             target:
-              entity_id: !input contador
+              entity_id: !input counter_entity
 
-  - choose:
-      - conditions:
-          - condition: or
-            conditions:
-              - condition: trigger
-                id: incrementar
-              - condition: trigger
-                id: resetar
+mode: single
