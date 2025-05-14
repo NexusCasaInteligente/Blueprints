@@ -48,7 +48,7 @@ trigger:
 
 condition: []
 
-action:
+action:  # <<< ESTA É A FORMA CORRETA
   - choose:
       - conditions:
           - condition: template
