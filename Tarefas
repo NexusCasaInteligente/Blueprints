@@ -1,28 +1,24 @@
 blueprint:
   name: "Tarefas"
-  description: "Automação de tarefas diárias"
+  description: "Automação de tarefas diárias
   domain: automation
   input: {}
 
-trigger_variables:
-  incrementar: null
-  resetar: null
-
-triggers:
+trigger:
   - platform: time
     at: "00:01:00"
-    id: "incrementar"
+    id: incrementar
   - platform: state
     entity_id: input_boolean.espanar_a_casa
     from: "on"
     to: "off"
-    id: "resetar"
+    id: resetar
 
 action:
   - choose:
       - conditions:
           - condition: trigger
-            id: "incrementar"
+            id: incrementar
         sequence:
           - service: counter.increment
             target:
@@ -32,26 +28,25 @@ action:
   - choose:
       - conditions:
           - condition: trigger
-            id: "resetar"
+            id: resetar
         sequence:
           - service: counter.reset
             target:
               entity_id: counter.espanar_a_casa
   
-  - choose:
-      - conditions:
-          - condition: or
-            conditions:
-              - condition: trigger
-                id: "incrementar"
-              - condition: trigger
-                id: "resetar"
-          - condition: state
-            entity_id: input_boolean.espanar_a_casa
-            state: "off"
-          - condition: template
-            value_template: "{{ states('counter.espanar_a_casa')|int >= 7 }}"
-        sequence:
-          - service: input_boolean.turn_on
-            target:
-              entity_id: input_boolean.espanar_a_casa
+  - if:
+      - condition: or
+        conditions:
+          - condition: trigger
+            id: incrementar
+          - condition: trigger
+            id: resetar
+      - condition: state
+        entity_id: input_boolean.espanar_a_casa
+        state: "off"
+      - condition: template
+        value_template: "{{ states('counter.espanar_a_casa')|int >= 7 }}"
+    then:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.espanar_a_casa
