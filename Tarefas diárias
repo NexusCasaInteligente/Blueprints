@@ -1,5 +1,5 @@
 blueprint:
-  name: Contador com Verificação e Reset via Booleano
+  name: Tarefas diárias
   description: >
     Incrementa um contador diariamente no horário especificado. Quando atingir
     o número de dias configurado, ativa um input_boolean. Se o input_boolean
