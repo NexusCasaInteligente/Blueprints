@@ -1,5 +1,5 @@
 blueprint:
-  name: Tarefas
+  name: Contador com Verificação e Reset via Booleano
   description: >
     Incrementa um contador diariamente no horário especificado. Quando atingir
     o número de dias configurado, ativa um input_boolean. Se o input_boolean
@@ -61,14 +61,13 @@ action:
             target:
               entity_id: !input contador
 
-          - if:
-              - condition: template
-                value_template: >-
-                  {{ state_attr( (input.contador), 'state') | int >= (input.dias_alvo) | int }}
-            then:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: !input boolean_alvo
+          - condition: template
+            value_template: >-
+              {{ states(inputs.contador) | int >= inputs.dias_alvo | int }}
+
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input boolean_alvo
 
       - conditions:
           - condition: trigger
