@@ -1,27 +1,28 @@
 blueprint:
   name: Tarefas Diárias
   description: >
-    Incrementa um contador diariamente no horário especificado. Quando atingir
-    o número de dias configurado, ativa um input_boolean. Se o input_boolean
+    Incrementa um contador diário (input_number) no horário especificado. Quando
+    atingir o número de dias configurado, ativa um input_boolean. Se o input_boolean
     for desligado manualmente, o contador volta a zero.
 
-    Útil para acompanhar tarefas periódicas, como limpar a casa, regar plantas, 
-    manutenção ou qualquer atividade recorrente.
+    Funciona de forma extremamente confiável, já que input_number permite operações
+    diretas de soma e leitura precisa de estado.
+
   domain: automation
   input:
     boolean_alvo:
       name: Booleano da Tarefa
-      description: Input_boolean que será ativado ao atingir o número de dias e que reseta o contador quando desligado.
+      description: Input_boolean que será ativado ao atingir o alvo e que reseta o contador quando desligado.
       selector:
         entity:
           domain: input_boolean
 
     contador:
       name: Contador da Tarefa
-      description: Contador que será incrementado diariamente.
+      description: Input_number que será incrementado diariamente.
       selector:
         entity:
-          domain: counter
+          domain: input_number
 
     dias_alvo:
       name: Dias até Acionar
@@ -60,15 +61,16 @@ action:
           - condition: trigger
             id: incrementar
         sequence:
-          - service: counter.increment
+          - service: input_number.set_value
             target:
               entity_id: !input contador
+            data:
+              value: >-
+                {{ (states[inputs.contador].state | float(0)) + 1 }}
 
-          - delay: '00:00:01'  # Garante tempo para atualização do estado
-
-          - condition: numeric_state
-            entity_id: !input contador
-            above: '{{ (inputs.dias_alvo | int) - 1 }}'
+          - condition: template
+            value_template: >-
+              {{ (states[inputs.contador].state | float(0)) >= (inputs.dias_alvo | float(0)) }}
 
           - service: input_boolean.turn_on
             target:
@@ -78,6 +80,8 @@ action:
           - condition: trigger
             id: zerar
         sequence:
-          - service: counter.reset
+          - service: input_number.set_value
             target:
               entity_id: !input contador
+            data:
+              value: 0
