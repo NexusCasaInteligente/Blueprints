@@ -1,0 +1,79 @@
+blueprint:
+  name: Tarefas
+  description: >
+    Incrementa um contador diariamente no horário especificado. Quando atingir
+    o número de dias configurado, ativa um input_boolean. Se o input_boolean
+    for desligado manualmente, o contador volta a zero.
+  domain: automation
+  input:
+    boolean_alvo:
+      name: Booleano de Ação
+      description: Input_boolean que será ativado ao atingir o alvo e serve como reset quando desligado.
+      selector:
+        entity:
+          domain: input_boolean
+
+    contador:
+      name: Contador
+      description: Contador que será incrementado diariamente.
+      selector:
+        entity:
+          domain: counter
+
+    dias_alvo:
+      name: Dias para atingir o alvo
+      description: Número de dias (valor alvo para ativar o booleano).
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: dias
+          mode: slider
+
+    hora_ativacao:
+      name: Hora de Ativação
+      description: Horário diário para incrementar o contador.
+      default: "00:00:00"
+      selector:
+        time: {}
+
+mode: single
+
+trigger:
+  - platform: time
+    at: !input hora_ativacao
+    id: incrementar
+  - platform: state
+    entity_id: !input boolean_alvo
+    to: 'off'
+    id: zerar
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: incrementar
+        sequence:
+          - service: counter.increment
+            target:
+              entity_id: !input contador
+
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ state_attr( (input.contador), 'state') | int >= (input.dias_alvo) | int }}
+            then:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: !input boolean_alvo
+
+      - conditions:
+          - condition: trigger
+            id: zerar
+        sequence:
+          - service: counter.reset
+            target:
+              entity_id: !input contador
