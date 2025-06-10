@@ -1,4 +1,4 @@
-oblueprint:
+blueprint:
   name: Odorização de banheiros
   description: >
     Liga uma tomada por tempo definido sempre que o sensor de ocupação for desligado,
