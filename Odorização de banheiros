@@ -1,5 +1,5 @@
-blueprint:
-  name: Odorização após saída
+oblueprint:
+  name: Odorização de banheiros
   description: >
     Liga uma tomada por tempo definido sempre que o sensor de ocupação for desligado,
     como ao sair do banheiro. Ideal para acionar odorizadores automáticos.
