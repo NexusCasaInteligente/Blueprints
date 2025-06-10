@@ -1,0 +1,50 @@
+blueprint:
+  name: Odorização de banheiros
+  description: >
+    Liga uma tomada por tempo definido sempre que o sensor de ocupação for desligado,
+    como ao sair do banheiro. Ideal para acionar odorizadores automáticos.
+  domain: automation
+  input:
+    sensor_ocupacao:
+      name: Sensor de presença (ex: "Coelhinho na toca")
+      description: >
+        Sensor binário que indica se há presença no local (deve ir para 'off' quando desocupado)
+      selector:
+        entity:
+          domain: binary_sensor
+
+    tomada_destino:
+      name: Tomada ou switch a ligar
+      description: >
+        A tomada que será ligada por um tempo após a saída detectada.
+      selector:
+        entity:
+          domain: switch
+
+    tempo_ligado:
+      name: Tempo ligado
+      description: >
+        Tempo que a tomada ficará ligada após a saída (padrão: 5 minutos).
+      default: "00:05:00"
+      selector:
+        duration:
+
+trigger:
+  - platform: state
+    entity_id: !input sensor_ocupacao
+    to: 'off'
+
+condition: []
+
+action:
+  - service: switch.turn_on
+    target:
+      entity_id: !input tomada_destino
+
+  - delay: !input tempo_ligado
+
+  - service: switch.turn_off
+    target:
+      entity_id: !input tomada_destino
+
+mode: restart
