@@ -8,7 +8,7 @@ blueprint:
     sensor_ocupacao:
       name: Sensor de presença
       description: >
-        Sensor binário que indica se há presença no local (Coelhinho na toca - banheiro).
+        Sensor binário que indica se há presença no local. Usar bee in the hive
         A automação será disparada quando ele mudar para 'off'.
       selector:
         entity:
