@@ -8,7 +8,7 @@ blueprint:
     sensor_ocupacao:
       name: Sensor de presença
       description: >
-        Sensor binário que indica se há presença no local (por exemplo: Coelhinho na toca - banheiro).
+        Sensor binário que indica se há presença no local (Coelhinho na toca - banheiro).
         A automação será disparada quando ele mudar para 'off'.
       selector:
         entity:
@@ -25,7 +25,7 @@ blueprint:
     tempo_ligado:
       name: Tempo ligado
       description: >
-        Tempo que a tomada ficará ligada após a saída. Padrão: 5 minutos.
+        Tempo que a tomada ficará ligada após a saída. Padrão de 5 minutos.
       default: "00:05:00"
       selector:
         duration:
