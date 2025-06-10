@@ -1,0 +1,83 @@
+blueprint:
+  name: Desligar entidades após ausência
+  description: >
+    Desliga uma ou mais entidades (luzes, switches, etc.) após o sensor de ocupação
+    permanecer 'off' por um tempo determinado. Opcionalmente, pode ser limitado por horário.
+  domain: automation
+  input:
+    ocupacao_sensor:
+      name: Sensor de Ocupação
+      description: Entidade que indica ocupação (input_boolean, binary_sensor, etc.)
+      selector:
+        entity:
+          domain: 
+            - input_boolean
+            - binary_sensor
+    tempo_ausencia:
+      name: Tempo de ausência
+      description: Tempo que o sensor deve permanecer 'off' antes de desligar as entidades
+      default: 00:20:00
+      selector:
+        duration:
+    entidades_alvo:
+      name: Entidades a desligar
+      description: Entidades que serão desligadas se estiverem ligadas (ex: luzes, switches)
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+              - switch
+              - fan
+              - climate
+    horario_inicio:
+      name: Horário de início (opcional)
+      description: A automação só será executada após este horário (formato HH:MM)
+      default: ''
+      selector:
+        time: {}
+    horario_fim:
+      name: Horário de fim (opcional)
+      description: A automação só será executada antes deste horário (formato HH:MM)
+      default: ''
+      selector:
+        time: {}
+
+trigger:
+  - platform: state
+    entity_id: !input ocupacao_sensor
+    to: 'off'
+    for: !input tempo_ausencia
+
+condition:
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ not (inputs.horario_inicio or inputs.horario_fim) }}"
+      - condition: and
+        conditions:
+          - condition: template
+            value_template: >
+              {% set inicio = strptime(inputs.horario_inicio, "%H:%M").time() %}
+              {% set agora = now().time() %}
+              {{ agora >= inicio }}
+          - condition: template
+            value_template: >
+              {% set fim = strptime(inputs.horario_fim, "%H:%M").time() %}
+              {% set agora = now().time() %}
+              {{ agora <= fim }}
+
+  - condition: template
+    value_template: >
+      {% for entity in expand(inputs.entidades_alvo.entity_id) %}
+        {% if entity.state == 'on' %}
+          {{ true }}
+        {% endif %}
+      {% endfor %}
+      {{ false }}
+
+action:
+  - service: homeassistant.turn_off
+    target: !input entidades_alvo
+
+mode: single
