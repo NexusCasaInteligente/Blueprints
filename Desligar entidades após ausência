@@ -7,21 +7,26 @@ blueprint:
   input:
     ocupacao_sensor:
       name: Sensor de Ocupação
-      description: Entidade que indica ocupação (input_boolean, binary_sensor, etc.)
+      description: >
+        Entidade que indica ocupação (como input_boolean ou binary_sensor)
       selector:
         entity:
           domain: 
             - input_boolean
             - binary_sensor
+
     tempo_ausencia:
       name: Tempo de ausência
-      description: Tempo que o sensor deve permanecer 'off' antes de desligar as entidades
+      description: >
+        Tempo que o sensor deve permanecer 'off' antes de desligar as entidades
       default: 00:20:00
       selector:
         duration:
+
     entidades_alvo:
       name: Entidades a desligar
-      description: Entidades que serão desligadas se estiverem ligadas (ex: luzes, switches)
+      description: >
+        Lista de entidades (luz, switch, etc.) que serão desligadas se estiverem ligadas
       selector:
         target:
           entity:
@@ -30,15 +35,19 @@ blueprint:
               - switch
               - fan
               - climate
+
     horario_inicio:
       name: Horário de início (opcional)
-      description: A automação só será executada após este horário (formato HH:MM)
+      description: >
+        A automação só será executada após este horário (formato HH:MM)
       default: ''
       selector:
         time: {}
+
     horario_fim:
       name: Horário de fim (opcional)
-      description: A automação só será executada antes deste horário (formato HH:MM)
+      description: >
+        A automação só será executada antes deste horário (formato HH:MM)
       default: ''
       selector:
         time: {}
